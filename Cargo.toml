@@ -1,0 +1,43 @@
+[package]
+name = "asr-rs"
+version = "0.0.1"
+edition = "2021"
+description = "Streaming local speech-to-text daemon for Wayland/Linux"
+license = "MIT"
+repository = "https://github.com/mecattaf/asr-rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
+
+# Audio capture + processing
+cpal = "0.17"
+rubato = "1.0"
+audioadapter-buffers = "2.0"
+ringbuf = "0.4"
+
+# WebSocket
+tokio-tungstenite = "0.26"
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Text processing
+regex = "1"
+
+# Error handling + logging
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# XDG paths
+directories = "6"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
