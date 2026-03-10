@@ -106,7 +106,7 @@ fn apply_spoken_punctuation(text: &str) -> String {
                     trailing_ws.push(result.pop().unwrap());
                 }
                 // Strip existing trailing punctuation
-                while result.ends_with(|c: char| matches!(c, '.' | ',' | '!' | '?' | ';' | ':'))
+                while result.ends_with(['.', ',', '!', '?', ';', ':'])
                 {
                     result.pop();
                 }

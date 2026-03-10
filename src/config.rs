@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::path::PathBuf;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub backend: BackendConfig,
@@ -44,16 +44,6 @@ pub struct PostprocessingConfig {
     pub spoken_punctuation: bool,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            backend: BackendConfig::default(),
-            audio: AudioConfig::default(),
-            injection: InjectionConfig::default(),
-            postprocessing: PostprocessingConfig::default(),
-        }
-    }
-}
 
 impl Default for BackendConfig {
     fn default() -> Self {
