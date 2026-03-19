@@ -82,6 +82,15 @@ fn spawn_preconnect(url: String) -> tokio::task::JoinHandle<Option<WsStream>> {
     })
 }
 
+fn write_state(active: bool) {
+    let dir = match std::env::var("XDG_RUNTIME_DIR") {
+        Ok(d) => std::path::PathBuf::from(d).join("asr-rs"),
+        Err(_) => return,
+    };
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = std::fs::write(dir.join("state"), if active { "active" } else { "inactive" });
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
@@ -123,6 +132,7 @@ async fn main() -> Result<()> {
     let mut preconnect_handle = Some(spawn_preconnect(config.backend.url.clone()));
 
     tracing::info!("ready — send SIGUSR1 to toggle, SIGUSR2 to stop (pkill -USR1 asr-rs)");
+    write_state(false);
 
     loop {
         tokio::select! {
@@ -130,6 +140,7 @@ async fn main() -> Result<()> {
                 if let Some(s) = session.take() {
                     tracing::info!("deactivating...");
                     s.deactivate().await;
+                    write_state(false);
                     // Pre-connect for next session
                     preconnect_handle = Some(spawn_preconnect(config.backend.url.clone()));
                 } else {
@@ -145,9 +156,13 @@ async fn main() -> Result<()> {
                         None
                     };
                     match activate(&config, injector, pre_ws) {
-                        Ok(s) => session = Some(s),
+                        Ok(s) => {
+                            session = Some(s);
+                            write_state(true);
+                        }
                         Err(e) => {
                             tracing::error!("activation failed: {e:#}");
+                            write_state(false);
                             preconnect_handle = Some(spawn_preconnect(config.backend.url.clone()));
                         }
                     }
@@ -157,6 +172,7 @@ async fn main() -> Result<()> {
                 if let Some(s) = session.take() {
                     tracing::info!("SIGUSR2: deactivating...");
                     s.deactivate().await;
+                    write_state(false);
                     // Pre-connect for next session
                     preconnect_handle = Some(spawn_preconnect(config.backend.url.clone()));
                 }
@@ -165,6 +181,7 @@ async fn main() -> Result<()> {
                 tracing::info!("received shutdown signal");
                 if let Some(s) = session.take() {
                     s.deactivate().await;
+                    write_state(false);
                 }
                 break;
             }
@@ -172,11 +189,17 @@ async fn main() -> Result<()> {
                 tracing::info!("received ctrl-c");
                 if let Some(s) = session.take() {
                     s.deactivate().await;
+                    write_state(false);
                 }
                 break;
             }
         }
     }
+
+    let _ = std::fs::remove_file(
+        std::path::PathBuf::from(std::env::var("XDG_RUNTIME_DIR").unwrap_or_default())
+            .join("asr-rs/state"),
+    );
 
     tracing::info!("goodbye");
     Ok(())
